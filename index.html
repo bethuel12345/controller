@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>User Timer Table with Admin Login & Persistent Storage</title>
+<style>
+  /* Splash Screen Styles */
+  #splash {
+    position: fixed;
+    inset: 0;
+    background: #121212;
+    color: #1de9b6;
+    display: none; /* Hide initially */
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    z-index: 9999;
+    flex-direction: column;
+    user-select: none;
+    transition: opacity 0.5s ease;
+  }
+  #splash.show {
+    display: flex;
+  }
+  #splash .spinner {
+    margin-top: 20px;
+    border: 6px solid #1de9b620;
+    border-top: 6px solid #1de9b6;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  #splash.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Login screen styles */
+  #loginScreen {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 10000;
+    user-select: none;
+  }
+  #loginScreen input[type="password"] {
+    padding: 12px 15px;
+    font-size: 1.2rem;
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 15px;
+    width: 280px;
+    max-width: 90vw;
+    outline: none;
+  }
+  #loginScreen button {
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    border: none;
+    background-color: #1de9b6;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s ease;
+  }
+  #loginScreen button:hover {
+    background-color: #17b89e;
+  }
+
+  /* Body & main content styles */
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url('images/123.jpg') center/cover no-repeat;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  h2 {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 2em;
+    text-shadow: 2px 2px 4px #000;
+  }
+  #addUserForm {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 500px;
+    margin: 30px auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  }
+  input[type="text"], input[type="number"] {
+    padding: 10px;
+    width: 140px;
+    margin: 8px;
+    border: none;
+    border-radius: 6px;
+    outline: none;
+  }
+  button {
+    padding: 8px 14px;
+    margin: 5px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .add-btn { background: #28a745; color: #fff; }
+  .sub-btn { background: #fd7e14; color: #fff; }
+  .delete-btn { background: #dc3545; color: #fff; }
+  button:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+  table {
+    width: 90%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+  }
+  th, td {
+    padding: 14px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  th {
+    background-color: rgba(0, 0, 0, 0.8);
+    font-size: 1.1em;
+  }
+  @media (max-width: 768px) {
+    input[type="text"], input[type="number"] {
+      width: 90%;
+      margin: 8px auto;
+      display: block;
+    }
+    button {
+      width: 90%;
+      margin: 6px auto;
+      display: block;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Splash Screen -->
+  <div id="splash">
+    <div>THE MAIYO</div>
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="loginScreen">
+    <h1>Admin Login</h1>
+    <input type="password" id="adminPassword" placeholder="Enter Admin Password" />
+    <button onclick="checkPassword()">Login</button>
+  </div>
+
+  <!-- Main Content (hidden initially) -->
+  <div id="mainContent" style="display:none;">
+    <h2>🧑‍💻 Active Users</h2>
+
+    <div id="addUserForm">
+      <input type="text" id="userName" placeholder="User Name" />
+      <input type="text" id="wifiName" placeholder="Wi-Fi Name" />
+      <input type="number" id="userDuration" placeholder="Duration (hrs)" step="0.1" />
+      <button class="add-btn" onclick="addUser()">➕ Add User</button>
+    </div>
+
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>User Name</th>
+          <th>Wi-Fi Name</th>
+          <th>Time Remaining</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>📴 Users Disconnected Today</h2>
+    <table id="userHistory">
+      <thead>
+        <tr>
+          <th>User Name</th>
+          <th>Wi-Fi Name</th>
+          <th>Time Disconnected</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+  const ADMIN_PASSWORD = "bm@1234"; // Your admin password
+
+  const splash = document.getElementById('splash');
+  const loginScreen = document.getElementById('loginScreen');
+  const mainContent = document.getElementById('mainContent');
+
+  // Store active users in Map, key = name|wifi
+  const activeUsers = new Map();
+  // Store disconnected users in array
+  let disconnectedUsers = [];
+
+  // Utility: format seconds as HH:MM:SS
+  function formatTime(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return [h,m,s].map(x => x.toString().padStart(2,'0')).join(':');
+  }
+
+  // Save current activeUsers and disconnectedUsers to localStorage
+  function saveData() {
+    // activeUsers saved as array of objects with name, wifi, remaining
+    const activeArr = [];
+    for (const [key, data] of activeUsers.entries()) {
+      const [name, wifi] = key.split('|');
+      activeArr.push({name, wifi, remaining: data.remaining});
+    }
+    localStorage.setItem('activeUsers', JSON.stringify(activeArr));
+    localStorage.setItem('disconnectedUsers', JSON.stringify(disconnectedUsers));
+  }
+
+  // Load data from localStorage and populate UI
+  function loadData() {
+    const activeArr = JSON.parse(localStorage.getItem('activeUsers')) || [];
+    const disconnectedArr = JSON.parse(localStorage.getItem('disconnectedUsers')) || [];
+    disconnectedUsers = disconnectedArr;
+
+    // Populate disconnected users table
+    const historyTbody = document.querySelector("#userHistory tbody");
+    historyTbody.innerHTML = '';
+    disconnectedUsers.forEach(user => {
+      const newRow = historyTbody.insertRow();
+      newRow.insertCell().textContent = user.name;
+      newRow.insertCell().textContent = user.wifi;
+      newRow.insertCell().textContent = user.disconnectedTime;
+    });
+
+    // Populate active users table & map
+    const tbody = document.querySelector("#userTable tbody");
+    tbody.innerHTML = '';
+    activeArr.forEach(user => {
+      addUserToTable(user.name, user.wifi, user.remaining, false);
+    });
+  }
+
+  function checkPassword() {
+    const inputPass = document.getElementById('adminPassword').value;
+    if (inputPass === ADMIN_PASSWORD) {
+      // Show splash screen after login
+      loginScreen.style.display = 'none';
+      splash.classList.add('show');
+
+      setTimeout(() => {
+        splash.classList.remove('show');
+        mainContent.style.display = 'block';
+        loadData();
+      }, 3000);
+    } else {
+      alert("Incorrect password! Access denied.");
+      document.getElementById('adminPassword').value = "";
+      document.getElementById('adminPassword').focus();
+    }
+  }
+
+  // Add user to table & activeUsers map, optionally saveData (default true)
+  function addUserToTable(name, wifi, remainingSeconds, save=true) {
+    const key = `${name}|${wifi}`;
+    if (activeUsers.has(key)) {
+      alert("This user and Wi-Fi combination already exists.");
+      return;
+    }
+    const tbody = document.querySelector("#userTable tbody");
+    const row = tbody.insertRow();
+
+    row.insertCell().textContent = name;
+    row.insertCell().textContent = wifi;
+    const timerCell = row.insertCell();
+    timerCell.textContent = formatTime(remainingSeconds);
+    timerCell.classList.add('duration');
+
+    const actionsCell = row.insertCell();
+    actionsCell.innerHTML = `
+      <button class="add-btn" onclick="changeTime(this, 60)">+1 min</button>
+      <button class="sub-btn" onclick="changeTime(this, -60)">−1 min</button>
+      <button class="delete-btn" onclick="manualDelete(this)">Delete</button>
+    `;
+
+    activeUsers.set(key, {remaining: remainingSeconds, timerCell});
+
+    if(save) saveData();
+  }
+
+  function addUser() {
+    const name = document.getElementById("userName").value.trim();
+    const wifi = document.getElementById("wifiName").value.trim();
+    let durationHrs = parseFloat(document.getElementById("userDuration").value.trim());
+
+    if (!name || !wifi || isNaN(durationHrs) || durationHrs <= 0) {
+      alert("Please enter valid user name, Wi-Fi name, and duration.");
+      return;
+    }
+
+    const durationSec = Math.floor(durationHrs * 3600);
+
+    addUserToTable(name, wifi, durationSec);
+
+    document.getElementById("userName").value = "";
+    document.getElementById("wifiName").value = "";
+    document.getElementById("userDuration").value = "";
+  }
+
+  function changeTime(button, amountSeconds) {
+    const row = button.closest("tr");
+    const name = row.cells[0].textContent;
+    const wifi = row.cells[1].textContent;
+    const key = `${name}|${wifi}`;
+
+    if (!activeUsers.has(key)) return;
+
+    const userData = activeUsers.get(key);
+    userData.remaining += amountSeconds;
+    if (userData.remaining < 0) userData.remaining = 0;
+    userData.timerCell.textContent = formatTime(userData.remaining);
+    saveData();
+  }
+
+  function manualDelete(button) {
+    const row = button.closest("tr");
+    const name = row.cells[0].textContent;
+    const wifi = row.cells[1].textContent;
+    const key = `${name}|${wifi}`;
+    if (!activeUsers.has(key)) return;
+
+    autoDisconnect(key);
+  }
+
+  function autoDisconnect(key) {
+    const userData = activeUsers.get(key);
+    if (!userData) return;
+
+    activeUsers.delete(key);
+
+    // Remove from active user table
+    const tbody = document.querySelector("#userTable tbody");
+    for(let i=0; i<tbody.rows.length; i++) {
+      const r = tbody.rows[i];
+      if (r.cells[0].textContent + "|" + r.cells[1].textContent === key) {
+        tbody.deleteRow(i);
+        break;
+      }
+    }
+
+    // Add to disconnected users history and save
+    const [name, wifi] = key.split("|");
+    const disconnectedTime = new Date().toLocaleString();
+    disconnectedUsers.push({name, wifi, disconnectedTime});
+
+    const historyTbody = document.querySelector("#userHistory tbody");
+    const newRow = historyTbody.insertRow();
+    newRow.insertCell().textContent = name;
+    newRow.insertCell().textContent = wifi;
+    newRow.insertCell().textContent = disconnectedTime;
+
+    saveData();
+  }
+
+  // Countdown every second for active users
+  setInterval(() => {
+    activeUsers.forEach((userData, key) => {
+      if(userData.remaining > 0) {
+        userData.remaining--;
+        userData.timerCell.textContent = formatTime(userData.remaining);
+      } else {
+        // Time's up, disconnect user
+        autoDisconnect(key);
+      }
+    });
+  }, 1000);
+</script>
+
+</body>
+</html>
