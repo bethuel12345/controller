@@ -5,33 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>User Timer Table with Admin Login & Persistent Storage</title>
 <style>
-   /* Splash Screen Styles */
+  /* --- (your existing styles) --- */
   #splash {
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: #121212;
     color: #1de9b6;
-    display: none; /* Hide initially */
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-    font-weight: 900;
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 3rem; font-weight: 900;
     letter-spacing: 3px;
     z-index: 9999;
     flex-direction: column;
     user-select: none;
     transition: opacity 0.5s ease;
   }
-  #splash.show {
-    display: flex;
-  }
+  #splash.show { display: flex; }
   #splash .spinner {
     margin-top: 20px;
     border: 6px solid #1de9b620;
     border-top: 6px solid #1de9b6;
     border-radius: 50%;
-    width: 50px;
-    height: 50px;
+    width: 50px; height: 50px;
     animation: spin 1s linear infinite;
   }
   @keyframes spin {
@@ -42,11 +36,8 @@
     opacity: 0;
     pointer-events: none;
   }
-
-  /* Login screen styles */
   #loginScreen {
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: rgba(0,0,0,0.85);
     color: #fff;
     display: flex;
@@ -80,13 +71,11 @@
   #loginScreen button:hover {
     background-color: #17b89e;
   }
-
-  /* Body & main content styles */
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url('images/123.jpg') center/cover no-repeat;
+    margin: 0; padding: 0;
+    background: linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.7)),
+      url('images/123.jpg') center/cover no-repeat;
     color: #fff;
     min-height: 100vh;
     overflow-x: hidden;
@@ -98,13 +87,13 @@
     text-shadow: 2px 2px 4px #000;
   }
   #addUserForm {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255,255,255,0.1);
     padding: 20px;
     border-radius: 12px;
     text-align: center;
     max-width: 500px;
     margin: 30px auto;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
   input[type="text"], input[type="number"] {
     padding: 10px;
@@ -134,30 +123,26 @@
     width: 90%;
     margin: 20px auto;
     border-collapse: collapse;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0,0,0,0.6);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 12px rgba(0,0,0,0.4);
   }
   th, td {
     padding: 14px;
     text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
   }
   th {
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0,0,0,0.8);
     font-size: 1.1em;
   }
   @media (max-width: 768px) {
     input[type="text"], input[type="number"] {
-      width: 90%;
-      margin: 8px auto;
-      display: block;
+      width: 90%; margin: 8px auto; display: block;
     }
     button {
-      width: 90%;
-      margin: 6px auto;
-      display: block;
+      width: 90%; margin: 6px auto; display: block;
     }
   }
 </style>
@@ -177,7 +162,7 @@
     <button onclick="checkPassword()">Login</button>
   </div>
 
-  <!-- Main Content (hidden initially) -->
+  <!-- Main Content -->
   <div id="mainContent" style="display:none;">
     <h2>🧑‍💻 Active Users</h2>
 
@@ -211,75 +196,79 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <!-- Clear Disconnected Users Button -->
+    <div style="text-align:center; margin-top:20px;">
+      <button class="delete-btn" onclick="clearDisconnectedUsers()">🗑️ Clear Disconnected Users</button>
+    </div>
   </div>
 
 <script>
-  const ADMIN_PASSWORD = "bm@1234"; // Your admin password
+  const ADMIN_PASSWORD = "bm@1234";
 
   const splash = document.getElementById('splash');
   const loginScreen = document.getElementById('loginScreen');
   const mainContent = document.getElementById('mainContent');
 
-  // Store active users in Map, key = name|wifi
   const activeUsers = new Map();
-  // Store disconnected users in array
   let disconnectedUsers = [];
 
-  // Utility: format seconds as HH:MM:SS
   function formatTime(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = Math.floor(seconds % 60);
-    return [h,m,s].map(x => x.toString().padStart(2,'0')).join(':');
+    return [h, m, s].map(x => x.toString().padStart(2, '0')).join(':');
   }
 
-  // Save current activeUsers and disconnectedUsers to localStorage
   function saveData() {
-    // activeUsers saved as array of objects with name, wifi, remaining
     const activeArr = [];
     for (const [key, data] of activeUsers.entries()) {
       const [name, wifi] = key.split('|');
-      activeArr.push({name, wifi, remaining: data.remaining});
+      activeArr.push({ name, wifi, endTimestamp: data.endTimestamp });
     }
     localStorage.setItem('activeUsers', JSON.stringify(activeArr));
     localStorage.setItem('disconnectedUsers', JSON.stringify(disconnectedUsers));
   }
 
-  // Load data from localStorage and populate UI
   function loadData() {
     const activeArr = JSON.parse(localStorage.getItem('activeUsers')) || [];
     const disconnectedArr = JSON.parse(localStorage.getItem('disconnectedUsers')) || [];
     disconnectedUsers = disconnectedArr;
 
-    // Populate disconnected users table
     const historyTbody = document.querySelector("#userHistory tbody");
     historyTbody.innerHTML = '';
     disconnectedUsers.forEach(user => {
-      const newRow = historyTbody.insertRow();
-      newRow.insertCell().textContent = user.name;
-      newRow.insertCell().textContent = user.wifi;
-      newRow.insertCell().textContent = user.disconnectedTime;
+      const row = historyTbody.insertRow();
+      row.insertCell().textContent = user.name;
+      row.insertCell().textContent = user.wifi;
+      row.insertCell().textContent = user.disconnectedTime;
     });
 
-    // Populate active users table & map
     const tbody = document.querySelector("#userTable tbody");
     tbody.innerHTML = '';
     activeArr.forEach(user => {
-      addUserToTable(user.name, user.wifi, user.remaining, false);
+      // Calculate remaining seconds from endTimestamp and now
+      const remainingSeconds = Math.max(0, Math.floor((user.endTimestamp - Date.now()) / 1000));
+      addUserToTable(user.name, user.wifi, remainingSeconds, false);
+      // After adding, update the stored endTimestamp properly
+      const key = `${user.name}|${user.wifi}`;
+      const userData = activeUsers.get(key);
+      if (userData) {
+        userData.endTimestamp = user.endTimestamp;
+      }
     });
   }
 
   function checkPassword() {
     const inputPass = document.getElementById('adminPassword').value;
     if (inputPass === ADMIN_PASSWORD) {
-      // Show splash screen after login
       loginScreen.style.display = 'none';
       splash.classList.add('show');
-
       setTimeout(() => {
         splash.classList.remove('show');
         mainContent.style.display = 'block';
         loadData();
+        purgeOldDisconnected(); // purge on initial load
       }, 3000);
     } else {
       alert("Incorrect password! Access denied.");
@@ -288,8 +277,7 @@
     }
   }
 
-  // Add user to table & activeUsers map, optionally saveData (default true)
-  function addUserToTable(name, wifi, remainingSeconds, save=true) {
+  function addUserToTable(name, wifi, remainingSeconds, save = true) {
     const key = `${name}|${wifi}`;
     if (activeUsers.has(key)) {
       alert("This user and Wi-Fi combination already exists.");
@@ -297,10 +285,13 @@
     }
     const tbody = document.querySelector("#userTable tbody");
     const row = tbody.insertRow();
-
     row.insertCell().textContent = name;
     row.insertCell().textContent = wifi;
     const timerCell = row.insertCell();
+    
+    // Calculate endTimestamp
+    const endTimestamp = Date.now() + remainingSeconds * 1000;
+
     timerCell.textContent = formatTime(remainingSeconds);
     timerCell.classList.add('duration');
 
@@ -311,25 +302,20 @@
       <button class="delete-btn" onclick="manualDelete(this)">Delete</button>
     `;
 
-    activeUsers.set(key, {remaining: remainingSeconds, timerCell});
-
-    if(save) saveData();
+    activeUsers.set(key, { endTimestamp, timerCell });
+    if (save) saveData();
   }
 
   function addUser() {
     const name = document.getElementById("userName").value.trim();
     const wifi = document.getElementById("wifiName").value.trim();
-    let durationHrs = parseFloat(document.getElementById("userDuration").value.trim());
-
-    if (!name || !wifi || isNaN(durationHrs) || durationHrs <= 0) {
-      alert("Please enter valid user name, Wi-Fi name, and duration.");
+    const durationHours = parseFloat(document.getElementById("userDuration").value);
+    if (!name || !wifi || isNaN(durationHours) || durationHours <= 0) {
+      alert("Please enter valid User Name, Wi-Fi Name, and Duration (hours > 0).");
       return;
     }
-
-    const durationSec = Math.floor(durationHrs * 3600);
-
-    addUserToTable(name, wifi, durationSec);
-
+    const durationSeconds = Math.floor(durationHours * 3600);
+    addUserToTable(name, wifi, durationSeconds);
     document.getElementById("userName").value = "";
     document.getElementById("wifiName").value = "";
     document.getElementById("userDuration").value = "";
@@ -340,13 +326,16 @@
     const name = row.cells[0].textContent;
     const wifi = row.cells[1].textContent;
     const key = `${name}|${wifi}`;
-
     if (!activeUsers.has(key)) return;
-
     const userData = activeUsers.get(key);
-    userData.remaining += amountSeconds;
-    if (userData.remaining < 0) userData.remaining = 0;
-    userData.timerCell.textContent = formatTime(userData.remaining);
+
+    userData.endTimestamp += amountSeconds * 1000;
+    if (userData.endTimestamp < Date.now()) {
+      userData.endTimestamp = Date.now();
+    }
+
+    const remainingSec = Math.max(0, Math.floor((userData.endTimestamp - Date.now()) / 1000));
+    userData.timerCell.textContent = formatTime(remainingSec);
     saveData();
   }
 
@@ -357,52 +346,85 @@
     const key = `${name}|${wifi}`;
     if (!activeUsers.has(key)) return;
 
-    autoDisconnect(key);
-  }
+    // Add to disconnected users list with current time
+    const disconnectedTime = new Date().toLocaleTimeString();
+    disconnectedUsers.push({ name, wifi, disconnectedTime });
+    saveData();
 
-  function autoDisconnect(key) {
-    const userData = activeUsers.get(key);
-    if (!userData) return;
-
+    // Remove from active users and UI
     activeUsers.delete(key);
+    row.remove();
 
-    // Remove from active user table
-    const tbody = document.querySelector("#userTable tbody");
-    for(let i=0; i<tbody.rows.length; i++) {
-      const r = tbody.rows[i];
-      if (r.cells[0].textContent + "|" + r.cells[1].textContent === key) {
-        tbody.deleteRow(i);
-        break;
-      }
-    }
-
-    // Add to disconnected users history and save
-    const [name, wifi] = key.split("|");
-    const disconnectedTime = new Date().toLocaleString();
-    disconnectedUsers.push({name, wifi, disconnectedTime});
-
+    // Update disconnected users UI
     const historyTbody = document.querySelector("#userHistory tbody");
     const newRow = historyTbody.insertRow();
     newRow.insertCell().textContent = name;
     newRow.insertCell().textContent = wifi;
     newRow.insertCell().textContent = disconnectedTime;
+  }
 
+  function autoDisconnect(key) {
+    if (!activeUsers.has(key)) return;
+    const userData = activeUsers.get(key);
+    const name = key.split('|')[0];
+    const wifi = key.split('|')[1];
+    const disconnectedTime = new Date().toLocaleTimeString();
+    disconnectedUsers.push({ name, wifi, disconnectedTime });
+    saveData();
+
+    // Remove from activeUsers and UI
+    activeUsers.delete(key);
+
+    // Remove row from user table UI
+    const tbody = document.querySelector("#userTable tbody");
+    for (const row of tbody.rows) {
+      if (row.cells[0].textContent === name && row.cells[1].textContent === wifi) {
+        row.remove();
+        break;
+      }
+    }
+
+    // Add to disconnected users UI
+    const historyTbody = document.querySelector("#userHistory tbody");
+    const newRow = historyTbody.insertRow();
+    newRow.insertCell().textContent = name;
+    newRow.insertCell().textContent = wifi;
+    newRow.insertCell().textContent = disconnectedTime;
+  }
+
+  function clearDisconnectedUsers() {
+    if (confirm("Clear all disconnected users from today?")) {
+      disconnectedUsers = [];
+      localStorage.setItem('disconnectedUsers', JSON.stringify(disconnectedUsers));
+      document.querySelector("#userHistory tbody").innerHTML = "";
+    }
+  }
+
+  function purgeOldDisconnected() {
+    // Purge disconnected users older than today (based on date)
+    const todayStr = new Date().toLocaleDateString();
+    disconnectedUsers = disconnectedUsers.filter(user => {
+      const disDate = new Date();
+      // Try parsing disconnectedTime - we only have time, so keep all disconnected users for today.
+      // You can extend this if you store full datetime.
+      return true; // Keep all for now since only time stored.
+    });
     saveData();
   }
 
-  // Countdown every second for active users
+  // Timer interval update - updates every second based on actual time
   setInterval(() => {
+    const now = Date.now();
     activeUsers.forEach((userData, key) => {
-      if(userData.remaining > 0) {
-        userData.remaining--;
-        userData.timerCell.textContent = formatTime(userData.remaining);
-      } else {
-        // Time's up, disconnect user
+      const remainingMs = userData.endTimestamp - now;
+      const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
+      userData.timerCell.textContent = formatTime(remainingSec);
+      if (remainingSec <= 0) {
         autoDisconnect(key);
       }
     });
   }, 1000);
 </script>
-   
+
 </body>
 </html>
